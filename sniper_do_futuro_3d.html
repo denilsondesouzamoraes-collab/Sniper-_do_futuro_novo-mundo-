@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>SNIPER DO FUTURO — Protótipo 3D</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08110d;color:#fff;font-family:system-ui,Arial;touch-action:none}
+canvas{display:block;width:100%;height:100%}
+#hud{position:fixed;inset:0;pointer-events:none;text-shadow:0 2px 4px #000}
+#top{position:absolute;top:9px;left:9px;right:9px;display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.pill{background:#07140edb;border:1px solid #ffffff55;border-radius:12px;padding:7px 10px;font-size:12px;font-weight:800}
+#hint{position:absolute;top:58px;left:50%;transform:translateX(-50%);background:#07140edb;border:1px solid #ffffff44;padding:7px 12px;border-radius:12px;font-size:12px;text-align:center;max-width:88vw}
+#controls{position:absolute;bottom:13px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:end}
+#pad{width:132px;height:132px;border:2px solid #ffffff88;border-radius:50%;background:#ffffff19;position:relative;pointer-events:auto;touch-action:none}
+#stick{position:absolute;width:52px;height:52px;border-radius:50%;background:#ffffff99;border:2px solid white;left:38px;top:38px}
+#buttons{display:grid;grid-template-columns:repeat(2,72px);gap:8px;pointer-events:auto}
+button{height:52px;border-radius:14px;border:1px solid #ffffffaa;background:#10251fe8;color:#fff;font-weight:900;font-size:11px;touch-action:manipulation}
+button.fire{background:#a52c22ed}button.active{outline:3px solid #ffe06b}
+#scope{display:none;position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle,transparent 0 25%,#0008 26% 100%)}
+#scope:before,#scope:after{content:"";position:absolute;background:#d8f5ff99}
+#scope:before{width:2px;height:100%;left:50%;top:0}#scope:after{height:2px;width:100%;left:0;top:50%}
+#start{position:fixed;inset:0;background:linear-gradient(#06110deF,#101b17f5);display:flex;align-items:center;justify-content:center;padding:22px;text-align:center}
+#card{max-width:440px;background:#15251f;border:1px solid #9dd6a766;border-radius:22px;padding:23px;box-shadow:0 15px 55px #000b}
+h1{margin:0 0 7px;color:#ffe15b;font-size:28px}#play{background:#e4b42e;color:#191307;padding:14px 24px;font-size:15px;margin-top:8px}
+small{color:#c4d1ca}
+</style>
+</head>
+<body>
+<div id="hud">
+ <div id="top"><div class="pill" id="stage">FASE 1 · VALE VERDE</div><div class="pill" id="stats">❤️ 100 · 🎯 0</div><div class="pill" id="weapon">CHAMAS DA DESTRUIÇÃO</div></div>
+ <div id="hint">Joystick para andar · arraste a tela para girar a câmera · mire e atire!</div>
+ <div id="controls"><div id="pad"><div id="stick"></div></div><div id="buttons">
+ <button id="aim">MIRAR</button><button class="fire" id="shoot">ATIRAR</button>
+ <button id="jump">PULAR</button><button id="crouch">AGACHAR</button>
+ <button id="swap" style="grid-column:span 2">TROCAR SNIPER</button>
+ </div></div>
+</div>
+<div id="scope"></div>
+<div id="start"><div id="card">
+<h1>SNIPER DO FUTURO</h1>
+<p><b>Protótipo 3D para Android</b></p>
+<p>Explore um campo de batalha 3D, controle o soldado futurista, teste a mira e enfrente alvos monstruosos.</p>
+<p><small>Esta demonstração usa gráficos 3D gerados no próprio jogo. Requer internet para carregar a biblioteca 3D. Ainda não possui servidor multiplayer nem é um APK.</small></p>
+<button id="play">ENTRAR NO JOGO</button>
+</div></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x91b4bd);scene.fog=new THREE.Fog(0x91b4bd,35,150);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,300);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xd9f2ff,0x33452d,2));
+const sun=new THREE.DirectionalLight(0xfff0cf,2.5);sun.position.set(-35,55,25);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);scene.add(sun);
+const mat=(color,rough=.8,metal=0)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(220,220),mat(0x536d42));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+const grid=new THREE.GridHelper(220,44,0x78915e,0x667e50);grid.position.y=.02;scene.add(grid);
+// rocks, trees, ruins
+for(let i=0;i<95;i++){let x=(Math.sin(i*91.7)*.5+.5)*180-90,z=(Math.cos(i*43.2)*.5+.5)*180-90;if(Math.hypot(x,z)<12)continue;
+ if(i%3!==0){let trunk=new THREE.Mesh(new THREE.CylinderGeometry(.25,.4,2.5,7),mat(0x59402b));trunk.position.set(x,1.25,z);trunk.castShadow=true;scene.add(trunk);let crown=new THREE.Mesh(new THREE.IcosahedronGeometry(1.6+(i%4)*.25,1),mat(i%2?0x245336:0x315e38));crown.position.set(x,3.2,z);crown.castShadow=true;scene.add(crown)}
+ else{let b=new THREE.Mesh(new THREE.BoxGeometry(3+(i%3),2+(i%4),3),mat(0x777d76));b.position.set(x,1,z);b.rotation.y=i; b.castShadow=true;b.receiveShadow=true;scene.add(b)}
+}
+const player=new THREE.Group();scene.add(player);
+const body=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.95,4,8),mat(0x253b4b));body.position.y=1.25;body.castShadow=true;player.add(body);
+const head=new THREE.Mesh(new THREE.SphereGeometry(.34,12,10),mat(0xc99b76));head.position.y=2.15;head.castShadow=true;player.add(head);
+const helmet=new THREE.Mesh(new THREE.SphereGeometry(.38,12,8,0,Math.PI*2,0,Math.PI/2),mat(0x172a38,.35,.4));helmet.position.y=2.28;player.add(helmet);
+const pack=new THREE.Mesh(new THREE.BoxGeometry(.55,.75,.28),mat(0x354b3d));pack.position.set(0,1.35,-.48);player.add(pack);
+const rifle=new THREE.Group();let barrel=new THREE.Mesh(new THREE.CylinderGeometry(.055,.07,1.5,8),mat(0x171c21,.3,.8));barrel.rotation.x=Math.PI/2;barrel.position.set(.25,1.62,.68);rifle.add(barrel);let stock=new THREE.Mesh(new THREE.BoxGeometry(.22,.2,.65),mat(0x252a30,.4,.5));stock.position.set(.25,1.6,.1);rifle.add(stock);player.add(rifle);
+player.position.set(0,0,0);
+const names=['CHAMAS DA DESTRUIÇÃO','BRILHO DA DESTRUIÇÃO','BRILHO CELESTIAL','ROXA DO APOCALIPSE','CHAMAS DIVINAS'];
+const colors=[0xff2525,0xffdf16,0x9b55ff,0x7900e8,0xff7815];
+const weaponMats=colors.map(c=>new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:1.7,metalness:.65,roughness:.25}));
+let weapon=0;let glow=new THREE.PointLight(colors[0],1.8,5);glow.position.set(.25,1.7,.5);player.add(glow);
+const enemies=[];const enemyKinds=[0xff4b40,0xffb52d,0x8b53d8,0x6cc94c,0x4ed4db];
+function makeEnemy(x,z,i){let g=new THREE.Group();let color=enemyKinds[i%enemyKinds.length];let m=mat(color,.42,.1);let torso=new THREE.Mesh(new THREE.SphereGeometry(.72,12,10),m);torso.position.y=1;torso.castShadow=true;g.add(torso);let face=new THREE.Mesh(new THREE.SphereGeometry(.43,12,10),mat(i%2?0x9ee65b:0xffd3a2));face.position.set(0,1.72,.12);g.add(face);
+ // simple fruit/monster features
+ if(i%3===1){let leaf=new THREE.Mesh(new THREE.ConeGeometry(.22,.55,6),mat(0x3b9b3f));leaf.position.y=2.25;g.add(leaf)}
+ if(i%3===2){for(let s of [-1,1]){let horn=new THREE.Mesh(new THREE.ConeGeometry(.13,.5,6),mat(0xe8dfd5));horn.position.set(s*.27,2.15,0);horn.rotation.z=s*-.35;g.add(horn)}}
+ g.position.set(x,0,z);g.userData={hp:3,alive:true,phase:Math.random()*6};scene.add(g);enemies.push(g)}
+for(let i=0;i<13;i++){let a=i*2.399,r=17+(i%5)*5;makeEnemy(Math.cos(a)*r,Math.sin(a)*r,i)}
+const bullets=[];let score=0,stage=1,aiming=false,crouched=false,velocityY=0,onGround=true;
+let joy={x:0,y:0},drag=false,lastX=0,yaw=0,cameraPitch=.12;
+const pad=document.getElementById('pad'),stick=document.getElementById('stick');
+function setJoy(e){let r=pad.getBoundingClientRect(),x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2,m=Math.hypot(x,y),lim=43;if(m>lim){x=x/m*lim;y=y/m*lim}joy.x=x/lim;joy.y=y/lim;stick.style.transform=`translate(${x}px,${y}px)`}
+pad.addEventListener('pointerdown',e=>{drag=true;pad.setPointerCapture(e.pointerId);setJoy(e)});pad.addEventListener('pointermove',e=>{if(drag)setJoy(e)});function endJoy(){drag=false;joy={x:0,y:0};stick.style.transform='translate(0,0)'}pad.addEventListener('pointerup',endJoy);pad.addEventListener('pointercancel',endJoy);
+renderer.domElement.addEventListener('pointerdown',e=>{if(e.clientX<innerWidth*.42&&e.clientY>innerHeight*.55)return;dragLook=true;lastX=e.clientX});let dragLook=false;
+renderer.domElement.addEventListener('pointermove',e=>{if(dragLook){yaw-=(e.clientX-lastX)*.006;lastX=e.clientX}});addEventListener('pointerup',()=>dragLook=false);
+document.getElementById('aim').onclick=()=>{aiming=!aiming;document.getElementById('aim').classList.toggle('active',aiming);document.getElementById('scope').style.display=aiming?'block':'none';camera.fov=aiming?34:65;camera.updateProjectionMatrix()};
+document.getElementById('crouch').onclick=()=>{crouched=!crouched;document.getElementById('crouch').classList.toggle('active',crouched);body.scale.y=crouched?.68:1;head.position.y=crouched?1.75:2.15};
+document.getElementById('jump').onclick=()=>{if(onGround){velocityY=7;onGround=false}};
+document.getElementById('swap').onclick=()=>{weapon=(weapon+1)%5;barrel.material=weaponMats[weapon];stock.material=weaponMats[weapon];glow.color.setHex(colors[weapon]);document.getElementById('weapon').textContent=names[weapon];say('Sniper equipada: '+names[weapon])};
+const raycaster=new THREE.Raycaster();function say(t){document.getElementById('hint').textContent=t}
+function fire(){raycaster.setFromCamera(new THREE.Vector2(0,0),camera);let alive=enemies.filter(e=>e.userData.alive);let hits=raycaster.intersectObjects(alive,true);if(hits.length){let target=hits[0].object;while(target.parent&&!target.userData.hp)target=target.parent;if(target.userData.hp){target.userData.hp--;if(target.userData.hp<=0){target.userData.alive=false;scene.remove(target);score++;document.getElementById('stats').textContent=`❤️ 100 · 🎯 ${score}`;if(score%13===0){stage++;say('FASE '+stage+' CONCLUÍDA! Novos alvos chegando.');for(let i=0;i<8+stage*2;i++){let a=Math.random()*Math.PI*2,r=22+Math.random()*35;makeEnemy(player.position.x+Math.cos(a)*r,player.position.z+Math.sin(a)*r,i+stage)}}else say('Alvo eliminado! '+names[weapon])}else say('Acertou! Continue atirando.')}}else say('Tiro disparado — alinhe a mira com um alvo!');}
+document.getElementById('shoot').onclick=fire;
+const clock=new THREE.Clock();function animate(){requestAnimationFrame(animate);let dt=Math.min(clock.getDelta(),.04);
+ let forward=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));let right=new THREE.Vector3(forward.z,0,-forward.x);let move=new THREE.Vector3().addScaledVector(forward,-joy.y).addScaledVector(right,joy.x);if(move.length()>1)move.normalize();let speed=aiming?3:6;if(crouched)speed*=.48;player.position.addScaledVector(move,speed*dt);player.position.x=THREE.MathUtils.clamp(player.position.x,-100,100);player.position.z=THREE.MathUtils.clamp(player.position.z,-100,100);
+ if(move.lengthSq()>.01)player.rotation.y=Math.atan2(move.x,move.z);
+ velocityY-=18*dt;player.position.y+=velocityY*dt;if(player.position.y<=0){player.position.y=0;velocityY=0;onGround=true}
+ for(let e of enemies){if(!e.userData.alive)continue;e.rotation.y+=dt*.35;let d=e.position.distanceTo(player.position);if(d<18){let dir=new THREE.Vector3().subVectors(player.position,e.position).setY(0).normalize();e.position.addScaledVector(dir,dt*.55)}}
+ let camOffset=new THREE.Vector3(Math.sin(yaw)*-7,4.2,Math.cos(yaw)*-7);camera.position.copy(player.position).add(camOffset);camera.position.y+=aiming?1.2:0;let look=player.position.clone().add(new THREE.Vector3(0,aiming?1.7:1.5,0)).addScaledVector(forward,aiming?24:4);camera.lookAt(look);
+ glow.intensity=1.4+Math.sin(performance.now()*.008)*.5;renderer.render(scene,camera);
+}
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+document.getElementById('play').onclick=()=>{document.getElementById('start').style.display='none';animate()};
+</script>
+</body></html>
